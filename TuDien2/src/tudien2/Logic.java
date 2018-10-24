@@ -5,6 +5,7 @@
  */
 package tudien2;
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
 class Dictionary implements Serializable {
@@ -40,7 +41,11 @@ class Dictionary implements Serializable {
 }
 
 public class Logic {
-    public static final File f = new File("tuDien.dat");
+    public static final File f = new File("TuDien.dat");
+    public static final File t = new File("E:\\Temporary.dat");
+    public static final Path source = Paths.get(f.getPath());
+    public static final Path target = Paths.get(t.getPath());
+    
 
      // kiem tra file co object hay khong.
     public static boolean hasObject(File f) {
@@ -77,7 +82,7 @@ public class Logic {
             Dictionary s;
             while(true) {
                 s = (Dictionary) inStream.readObject();
-                if( s.getWord() == word) {
+                if( s.getWord().equals(word)) {
                     check = true;
                     break;
                 }
@@ -92,25 +97,25 @@ public class Logic {
     
      // viet tu vao File.
     public static void write(Dictionary s, File f) {
+        FileOutputStream fos = null;
+        ObjectOutputStream oStream = null;
         try {
-            FileOutputStream fo;
-            ObjectOutputStream oStream = null;
- 
             // neu file chu ton tai thi tao file va ghi binh thuong.
             if (!f.exists()) {
-                fo = new FileOutputStream(f);
-                oStream = new ObjectOutputStream(fo);
+                f.createNewFile();
+                fos = new FileOutputStream(f);
+                oStream = new ObjectOutputStream(fos);
             } else { // neu file ton tai.
  
                 // neu chua co thi ghi binh thuong.
                 if (!hasObject(f)) {
-                    fo = new FileOutputStream(f);
-                    oStream = new ObjectOutputStream(fo);
+                    fos = new FileOutputStream(f);
+                    oStream = new ObjectOutputStream(fos);
                 } else { // neu co roi thi ghi them vao.
  
-                    fo = new FileOutputStream(f, true);
+                    fos = new FileOutputStream(f, true);
  
-                    oStream = new ObjectOutputStream(fo) {
+                    oStream = new ObjectOutputStream(fos) {
                         protected void writeStreamHeader() throws IOException {
                             reset();
                         }
@@ -120,16 +125,43 @@ public class Logic {
  
             if(sameWord(s.getWord(), f) == false)
                 oStream.writeObject(s);
-            oStream.close();
- 
         } catch (IOException e) {
             e.printStackTrace();
+        }  finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (oStream != null) {
+                try {
+                    oStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+ 
+        }
+    }
+    
+     // xoa het du lieu cu ghi lai tu dau.
+    public static void writeBegin(Dictionary s, File f) {
+        try {
+            if(!f.exists())
+                f.createNewFile();
+            FileOutputStream fos = new FileOutputStream(f);
+            ObjectOutputStream oStream = new ObjectOutputStream(fos);
+            oStream.writeObject(s);
+            oStream.close();
+        } catch (IOException e) {
         }
     }
     
      // doc toan bo tu trong File.
-    public static void read(File f) {
-        FileInputStream fis;
+    public static void read_All(File f) {
+        FileInputStream fis = null;
         ObjectInputStream inStream = null;
         try {
             fis = new FileInputStream(f);
@@ -142,6 +174,22 @@ public class Logic {
             }
         } catch (ClassNotFoundException e) {
         } catch (IOException e) {
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (inStream != null) {
+                try {
+                    inStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+ 
         }
     } 
     
@@ -156,7 +204,7 @@ public class Logic {
             inStream = new ObjectInputStream(fi);
             while(true) {
                 s = (Dictionary) inStream.readObject();
-                if(s.getWord() == word) {
+                if(s.getWord().equals(word)) {
                     mean = s.getMean();
                     break;
                 }
@@ -166,187 +214,188 @@ public class Logic {
         } catch (IOException e) {
         } catch (ClassNotFoundException e) {
         }
-        return mean;
+        
+        if(mean == null)
+            return "NOT FOUND";
+        else
+            return mean + ".";
     }
     
      // tim nghia trong File.
-    public static ArrayList<String> findMean(String mean, File f) {
+    public static String findMean(String mean, File f) {
         FileInputStream fi;
         ObjectInputStream inStream = null;
-        ArrayList<String> word = new ArrayList();
+        String word = null;
         Dictionary s;
         try {
             fi = new FileInputStream(f);
             inStream = new ObjectInputStream(fi);
             while(true) {
                 s = (Dictionary) inStream.readObject();
-                if(s.getMean() == mean) {
-                    word.add(s.getWord());
+                StringTokenizer st = new StringTokenizer(s.getMean(), ",");
+                while(st.hasMoreTokens()) {
+                    String str = st.nextToken();
+                    if(str.startsWith(" "))
+                        str = str.substring(1);
+                    if(str.equals(mean)) {
+                        word += s.getWord() + ", ";
+                    }
                 }
             }
         } catch (FileNotFoundException e) {
         } catch (IOException e) {
         } catch (ClassNotFoundException e) {
         }
-        return word;
-    }
-    
-     // in ra tu, nghia vua tim.
-    public static void showFind(int choose) {
-        Scanner sc = new Scanner(System.in);
-        String find;
-        if(choose == 1) {
-            System.out.print("Nhập từ bạn muốn tìm: ");
-            find = sc.nextLine();
-            System.out.println("nghĩa của từ " + find + " là: " + findWord(find, f));
-        } else {
-            System.out.print("Nhập nghĩa bạn muốn tìm: ");
-            find = sc.nextLine();
-            ArrayList<String> word = findMean(find, f);
-            if(word.size() == 1) {
-                System.out.println("Từ có nghĩa " + find + " là: " + word.get(0));
-            } else {
-                System.out.print("Những từ có nghĩa " + find + " là: ");
-                for(int i = 0; i < word.size()-1; i++) {
-                    System.out.print(word.get(i) + ", ");
-                }
-                System.out.println(word.get(word.size()-1) + ".");
-            }
-        }
         
-        System.out.println("Bạn có muốn tiếp tục tìm?");
-        System.out.println("1. Có.");
-        System.out.println("2. Không.");
-        choose = Integer.parseInt(sc.nextLine());
-        if(choose == 1) {
-            System.out.println("Bạn muốn tìm theo từ hay nghĩa?");
-            System.out.println("1. Từ.");
-            System.out.println("2. Nghĩa.");
-            choose = Integer.parseInt(sc.nextLine());
-            showFind(choose);
-        }
+        if(word == null)
+            return "NOT FOUND";
+        else
+            return word.substring(4,word.length()-2) + ".";
     }
     
      // sua tu trong File.
     public static void repairWord(String incorrectWord, String correctWord, File f) {
-        FileInputStream fi;
+        FileInputStream fis = null;
         ObjectInputStream inStream = null;
         Dictionary s;
         try {
-            fi = new FileInputStream(f);
-            inStream = new ObjectInputStream(fi);
+            Files.copy(source, target, StandardCopyOption.COPY_ATTRIBUTES);
+            fis = new FileInputStream(target.toFile());
+            inStream = new ObjectInputStream(fis);
+            
+            s = (Dictionary) inStream.readObject();
+            if(s.getWord().equals(incorrectWord)) {
+                s.setWord(correctWord);
+            }
+            writeBegin(s, f);
             while(true) {
                 s = (Dictionary) inStream.readObject();
-                if(s.getWord() == incorrectWord) {
+                if(s.getWord().equals(incorrectWord)) {
                     s.setWord(correctWord);
-                    break;
                 }
-            }
-            inStream.close();
+                write(s, f);
+            } 
         } catch (FileNotFoundException e) {
         } catch (IOException e) {
         } catch (ClassNotFoundException e) {
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (inStream != null) {
+                try {
+                    inStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                Files.delete(target);
+            } catch(IOException e) {
+            }
         }
     }
     
      // sua nghia trong File.
     public static void repairMean(String Word, String correctMean, File f) {
-        FileInputStream fi;
+        FileInputStream fis = null;
         ObjectInputStream inStream = null;
         Dictionary s;
         try {
-            fi = new FileInputStream(f);
-            inStream = new ObjectInputStream(fi);
+            Files.copy(source, target, StandardCopyOption.COPY_ATTRIBUTES);
+            fis = new FileInputStream(target.toFile());
+            inStream = new ObjectInputStream(fis);
+            
+            s = (Dictionary) inStream.readObject();
+            if(s.getWord().equals(Word)) {
+                s.setMean(correctMean);
+            }
+            writeBegin(s, f);
             while(true) {
                 s = (Dictionary) inStream.readObject();
-                if(s.getWord() == Word) {
+                if(s.getWord().equals(Word)) {
                     s.setMean(correctMean);
-                    break;
                 }
-            }
-            inStream.close();
+                write(s, f);
+            } 
         } catch (FileNotFoundException e) {
         } catch (IOException e) {
         } catch (ClassNotFoundException e) {
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (inStream != null) {
+                try {
+                    inStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                Files.delete(target);
+            } catch(IOException e) {
+            }
         }
     }
     
-     // tiep tuc sua neu muon sua tiep.
-    public static void continueRepair(int choose) {
-        Scanner sc = new Scanner(System.in);
-        String incorrect,correct;
-        if(choose ==1 ) {
-            System.out.print("Nhập từ sai: ");
-            incorrect = sc.nextLine();
-            System.out.print("Nhập từ đúng: ");
-            correct = sc.nextLine();
-            repairWord(incorrect, correct, f);
-        } else {
-            System.out.print("Nhập từ có nghĩa sai: ");
-            incorrect = sc.nextLine();
-            System.out.print("Nhập nghĩa đúng: ");
-            correct = sc.nextLine();
-            repairMean(incorrect, correct, f);
-        }
-        
-        System.out.println("Bạn có muốn sửa tiếp không?");
-        System.out.println("1. Có.");
-        System.out.println("2. Không.");
-        choose = Integer.parseInt(sc.nextLine());
-        if(choose == 1) {
-            System.out.println("Bạn muốn sửa từ hay sửa nghĩa?");
-            System.out.println("1. Từ.");
-            System.out.println("2. Nghĩa.");
-            choose = Integer.parseInt(sc.nextLine());
-            continueRepair(choose);
-        }
-        
-    }
+    
     
      //xoa tu trong File.
     public static void deleteWord(String Word, File f) {
-        FileInputStream fi;
+        FileInputStream fis = null;
         ObjectInputStream inStream = null;
         Dictionary s;
         try {
-            fi = new FileInputStream(f);
-            inStream = new ObjectInputStream(fi);
+            Files.copy(source, target, StandardCopyOption.COPY_ATTRIBUTES);
+            fis = new FileInputStream(target.toFile());
+            inStream = new ObjectInputStream(fis);
+            
+            s = (Dictionary) inStream.readObject();
+            if(s.getWord().equals(Word))
+                s = (Dictionary) inStream.readObject();
+            writeBegin(s, f);
             while(true) {
                 s = (Dictionary) inStream.readObject();
-                if(s.getWord() == Word) {
-                    
-                    break;
+                if(!s.getWord().equals(Word)) {
+                    write(s, f);
                 }
-            }
-            inStream.close();
+                
+            } 
         } catch (FileNotFoundException e) {
         } catch (IOException e) {
         } catch (ClassNotFoundException e) {
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (inStream != null) {
+                try {
+                    inStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                Files.delete(target);
+            } catch(IOException e) {
+            }
         }
     }
     
-     // viet tu vao File.
-    public static void insertWordIntoFile() {
-        Scanner sc = new Scanner(System.in);
-        String word, mean;
-        System.out.print("Nhập số từ bạn muốn nhập: ");
-        int i = Integer.parseInt(sc.nextLine());
-        while(i != 0) {
-            System.out.print("Nhập từ: ");
-            word = sc.nextLine();
-            System.out.print("Nhập nghĩa: ");
-            mean = sc.nextLine();
-            write(new Dictionary(word, mean), f);
-            i--;
-        }
-        
-        System.out.println("Bạn có muốn nhập thêm từ không?");
-        System.out.println("1. Có.");
-        System.out.println("2. Không.");
-        i = Integer.parseInt(sc.nextLine());
-        if(i == 1 )
-            insertWordIntoFile();
-    }
+     
 }
      
     
